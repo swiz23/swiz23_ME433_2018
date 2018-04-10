@@ -63,7 +63,7 @@ int main() {
 	// use _CP0_SET_COUNT(0) and _CP0_GET_COUNT() to test the PIC timing
 	// remember the core timer runs at half the sysclk
         _CP0_SET_COUNT(0);
-        while (_CP0_GET_COUNT() < 1999){
+        while (_CP0_GET_COUNT() < 2000){
             ;
         }
         LATAINV = 0x10; 
