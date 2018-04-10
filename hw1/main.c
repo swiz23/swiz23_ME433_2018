@@ -63,11 +63,13 @@ int main() {
 	// use _CP0_SET_COUNT(0) and _CP0_GET_COUNT() to test the PIC timing
 	// remember the core timer runs at half the sysclk
         _CP0_SET_COUNT(0);
+    // to get the LED to switch states every .5ms, we need a delay of 
+    // 48000000/2*.0005 = 1200 ticks
         while (_CP0_GET_COUNT() < 12000){
             ;
         }
-        LATAINV = 0x10; 
-        while(!PORTBbits.RB4) {
+        LATAINV = 0x10; // invert the fourth bit
+        while(!PORTBbits.RB4) { // go into an infinite loop when button is pressed
             ;
         }
        
