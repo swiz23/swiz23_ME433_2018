@@ -64,7 +64,7 @@ int main() {
 	// remember the core timer runs at half the sysclk
         _CP0_SET_COUNT(0);
     // to get the LED to switch states every .5ms, we need a delay of 
-    // 48000000/2*.0005 = 1200 ticks
+    // 48000000/2*.0005 = 12000 ticks
         while (_CP0_GET_COUNT() < 12000){
             ;
         }
