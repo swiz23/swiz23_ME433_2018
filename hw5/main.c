@@ -37,7 +37,7 @@
 #pragma config FUSBIDIO = ON // USB pins controlled by USB module
 #pragma config FVBUSONIO = ON // USB BUSON controlled by USB module
 
-#define ADDR 0b0100000
+#define ADDR 0b01000000 // default is writing mode
 
 void initExpander(void);
 void setExpander(unsigned char pin, unsigned char level);
@@ -77,10 +77,10 @@ int main() {
         }
         LATAINV = 0x10; // invert the fourth bit
        
-        if (getExpander() >= 0b10000000){
+        if ((getExpander() & 0b10000000) == 0b10000000){
             setExpander(0x0A,0b00000000);
         } else {
-            setExpander(0x0A,0b00000001);
+            setExpander(0x0A,0b00001111);
         }
     }
 }
@@ -90,12 +90,12 @@ void initExpander(){
     ANSELBbits.ANSB3 = 0; // make Pin 7: SCL2 pin on PIC not an analog pin
     i2c_master_setup();
     setExpander(0x00,0b11110000);
-    setExpander(0x0A,0b00000000);
+    setExpander(0x0A,0b00001111);
 }
 
 void setExpander(unsigned char pin, unsigned char level){
     i2c_master_start(); // start bit
-    i2c_master_send(ADDR<<1|0); //signify writing
+    i2c_master_send(ADDR); //signify writing
     i2c_master_send(pin);
     i2c_master_send(level);
     i2c_master_stop();
@@ -103,10 +103,10 @@ void setExpander(unsigned char pin, unsigned char level){
 
 unsigned char getExpander() {
     i2c_master_start(); // start bit
-    i2c_master_send(ADDR<<1|0); //signify writing
+    i2c_master_send(ADDR); //signify writing
     i2c_master_send(0x09);
     i2c_master_restart();
-    i2c_master_send(ADDR<<1|1);
+    i2c_master_send(ADDR|1); //signify reading
     unsigned char r = i2c_master_recv();
     i2c_master_ack(1);
     i2c_master_stop();
