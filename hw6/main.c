@@ -128,3 +128,8 @@ void draw_progress_bar(short x, short y, short h, short len1, short c1, short le
         }
     }
 }
+
+// Since the screen is 128 pixels wide and each character takes up 5 pixels, a 
+// max of 25 characters can be printed on the screen at the same time (at least
+// in one row). From the fps, it takes about 1/43 of a second to display the
+// 'hello world' characters and the progress bar.
