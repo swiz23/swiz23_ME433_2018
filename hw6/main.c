@@ -63,21 +63,25 @@ int main() {
 //    LATAbits.LATA4 = 1;
 //    TRISBbits.TRISB4 = 1;
     LCD_init();
-    LCD_clearScreen(WHITE);
+    LCD_clearScreen(BLUE);
     char message[30];
     int cnt = 0;
-    sprintf(message,"Hello World %d  ",cnt);
+    double fps = 0;
     __builtin_enable_interrupts();
 
     while(1) {
         _CP0_SET_COUNT(0);
-    
+        sprintf(message,"Hello World %d  ",cnt);
         draw_string(28,32, message, WHITE, BLUE);
-        
+        draw_progress_bar(14,50,5,100,MAGENTA,cnt,WHITE);
         cnt++;
         if (cnt > 100) {
             cnt = 0;
         }
+        fps = 24000000.0/_CP0_GET_COUNT();
+        sprintf(message,"FPS = %.2f ",fps);
+        draw_string(28,100, message, WHITE, BLUE);
+        
     // to get the program to run at 10Hz we need a delay of 
     // 48000000/2*.1 = 2400000 ticks
         while (_CP0_GET_COUNT() < 2400000){
@@ -87,13 +91,40 @@ int main() {
 }
 
 void draw_string(short x, short y, char* message, short c1, short c2) {
-    
+    int i = 0;
+    while(message[i]) {
+        draw_char(x+5*i, y, message[i], c1, c2);
+        i++;
+    }
 }
 
 void draw_char(short x, short y, char mess, short c1, short c2) {
-    
+    int col;
+    char row = mess - 0x20;
+    for (col=0; col<5; col++) {
+        char pixels = ASCII[row][col];
+        int i;
+        for(i = 0; i < 8; i++) {
+            if ((x+col) < 128 && (y+i) < 160) {
+                if ((pixels >>i)&1 == 1) {
+                    LCD_drawPixel(x+col,y+i,c1);
+                } else {
+                    LCD_drawPixel(x+col,y+i,c2);
+                }
+            }
+        }
+    }
 }
 
 void draw_progress_bar(short x, short y, short h, short len1, short c1, short len2, short c2) {
-    
+    int i,j;
+    for (i=0;i<len1;i++) {
+        for (j=0;j<h;j++){
+            if (i < len2){
+                LCD_drawPixel(x+i,y+j,c1);
+            } else {
+                LCD_drawPixel(x+i,y+j,c2);
+            }
+        }
+    }
 }
