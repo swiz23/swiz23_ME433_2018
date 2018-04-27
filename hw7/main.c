@@ -1,6 +1,7 @@
 #include<xc.h>           // processor SFR definitions
 #include<sys/attribs.h>  // __ISR macro
 #include<stdio.h>
+#include<math.h>
 #include "i2c_master_noint.h"
 #include "ST7735.h"
 
@@ -74,7 +75,7 @@ int main() {
     LCD_init();
     LCD_clearScreen(BLUE);
     
-    char dat[15]; // initialize array to hold bytes from IMU
+    unsigned char dat[15]; // initialize array to hold bytes from IMU
     signed short final_data[8];
     int cntr;
     
@@ -88,23 +89,25 @@ int main() {
         
         if (getIMU() == 0x69) {
             LATAINV = 0x10; // invert the fourth bit
+            sprintf(message,"Who Am I: %d  ",getIMU());
+            draw_string(5,5, message, WHITE, BLUE);
         }
         
         I2C_read_multiple(0x20,dat,14);
         for (cntr = 0; cntr < 14; cntr+=2) {
-            final_data[cntr] = dat[cntr] | dat[cntr+1] << 8;
+            final_data[cntr/2] = dat[cntr] | dat[cntr+1] << 8;
         }
         
-        sprintf(message,"Hello World %d  ",cnt);
-        draw_string(28,32, message, WHITE, BLUE);
-        draw_progress_bar(14,50,5,100,MAGENTA,cnt,WHITE);
+        draw_progress_bar(64,95,5,60,MAGENTA,cnt,WHITE);
         cnt++;
         if (cnt > 100) {
             cnt = 0;
         }
-        fps = 24000000.0/_CP0_GET_COUNT();
-        sprintf(message,"FPS = %.2f ",fps);
-        draw_string(28,100, message, WHITE, BLUE);
+        sprintf(message,"Accel X: %d  ",final_data[4]);
+        draw_string(5,15, message, WHITE, BLUE);
+        
+        sprintf(message,"Accel Y: %d  ",final_data[5]);
+        draw_string(5,25, message, WHITE, BLUE);
         
         // to get the LED to blink at 20Hz, we need a delay of 
         // 48000000/2* = 6000000 ticks
@@ -197,4 +200,35 @@ void draw_progress_bar(short x, short y, short h, short len1, short c1, short le
             }
         }
     }
+    
+    for (i=0;i<len1;i++) {
+        for (j=0;j<h;j++){
+            if (i < len2){
+                LCD_drawPixel(x-i,y+j,c1);
+            } else {
+                LCD_drawPixel(x-i,y+j,c2);
+            }
+        }
+    }  
+    
+    for (i=0;i<h;i++) {
+        for (j=0;j<len1;j++){
+            if (j < len2){
+                LCD_drawPixel(x+i,y-j,c1);
+            } else {
+                LCD_drawPixel(x+i,y-j,c2);
+            }
+        }
+    }  
+
+    for (i=0;i<h;i++) {
+        for (j=0;j<len1;j++){
+            if (j < len2){
+                LCD_drawPixel(x+i,y+j,c1);
+            } else {
+                LCD_drawPixel(x+i,y+j,c2);
+            }
+        }
+    }     
+    
 }
