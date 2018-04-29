@@ -47,8 +47,10 @@ void setIMU(unsigned char pin, unsigned char level);
 void I2C_read_multiple(unsigned char reg, unsigned char *data, int length);
 unsigned char getIMU(void);
 void draw_string(short x, short y, char* message, short c1, short c2);
+signed short sign(signed short val);
 void draw_char(short x, short y, char mess, short c1, short c2);
-void draw_progress_bar(short x, short y, short h, short len1, short c1, short len2, short c2);
+void draw_plain(short x, short y, short h, short len, short c);
+void draw_axes(short x, short y, short h, short len, short c1, signed short accX, signed short accY, short c2);
 
 int main() {
 
@@ -69,27 +71,23 @@ int main() {
     // do your TRIS and LAT commands here
     TRISAbits.TRISA4 = 0;
     LATAbits.LATA4 = 1;
-    TRISBbits.TRISB4 = 1;
   
     initIMU();
     LCD_init();
     LCD_clearScreen(BLUE);
-    
+    char message[30];
     unsigned char dat[15]; // initialize array to hold bytes from IMU
     signed short final_data[8];
     int cntr;
     
-    char message[30];
-    int cnt = 0;
-    double fps = 0;
     __builtin_enable_interrupts();
-
+    draw_plain(63,96,5,60,WHITE);
     while(1) {
         _CP0_SET_COUNT(0);
         
         if (getIMU() == 0x69) {
             LATAINV = 0x10; // invert the fourth bit
-            sprintf(message,"Who Am I: %d  ",getIMU());
+            sprintf(message,"Who Am I: %d",getIMU());
             draw_string(5,5, message, WHITE, BLUE);
         }
         
@@ -98,11 +96,8 @@ int main() {
             final_data[cntr/2] = dat[cntr] | dat[cntr+1] << 8;
         }
         
-        draw_progress_bar(64,95,5,60,MAGENTA,cnt,WHITE);
-        cnt++;
-        if (cnt > 100) {
-            cnt = 0;
-        }
+        draw_axes(63,96,5,60,MAGENTA,final_data[4],final_data[5],WHITE);
+
         sprintf(message,"Accel X: %d  ",final_data[4]);
         draw_string(5,15, message, WHITE, BLUE);
         
@@ -189,46 +184,54 @@ void draw_char(short x, short y, char mess, short c1, short c2) {
     }
 }
 
-void draw_progress_bar(short x, short y, short h, short len1, short c1, short len2, short c2) {
+void draw_plain(short x, short y, short h, short len, short c) {
     int i,j;
-    for (i=0;i<len1;i++) {
+
+    for (i=0;i<len;i++) {
         for (j=0;j<h;j++){
-            if (i < len2){
-                LCD_drawPixel(x+i,y+j,c1);
+            LCD_drawPixel(x-i,y+j-2,c);
+            LCD_drawPixel(x+i,y+j-2,c);
+        }
+    }
+    
+    for (i=0;i<h;i++) {
+        for (j=0;j<len;j++){
+            LCD_drawPixel(x+i-2,y-j,c);
+            LCD_drawPixel(x+i-2,y+j,c);
+        }
+    }      
+}
+
+void draw_axes(short x, short y, short h, short len, short c1, signed short accX, signed short accY, short c2) {
+    short i,j;
+    signed short sgnX = sign(accX);
+    signed short sgnY = sign(accY);
+    accX = (signed short) (accX/16000.0*len);
+    accY = (signed short) (accY/16000.0*len);
+    
+    for (i=0;i<len;i++) {
+        for (j=0;j<h;j++){
+            if (i < abs(accX)){
+                LCD_drawPixel(x-i*sgnX,y+j-2,c1);
             } else {
-                LCD_drawPixel(x+i,y+j,c2);
+                LCD_drawPixel(x-i,y+j-2,c2);
+                LCD_drawPixel(x+i,y+j-2,c2);
             }
         }
     }
     
-    for (i=0;i<len1;i++) {
-        for (j=0;j<h;j++){
-            if (i < len2){
-                LCD_drawPixel(x-i,y+j,c1);
-            } else {
-                LCD_drawPixel(x-i,y+j,c2);
-            }
-        }
-    }  
-    
     for (i=0;i<h;i++) {
-        for (j=0;j<len1;j++){
-            if (j < len2){
-                LCD_drawPixel(x+i,y-j,c1);
+        for (j=0;j<len;j++){
+            if (j < abs(accY)){
+                LCD_drawPixel(x+i-2,y-j*sgnY,c1);
             } else {
-                LCD_drawPixel(x+i,y-j,c2);
-            }
-        }
-    }  
-
-    for (i=0;i<h;i++) {
-        for (j=0;j<len1;j++){
-            if (j < len2){
-                LCD_drawPixel(x+i,y+j,c1);
-            } else {
-                LCD_drawPixel(x+i,y+j,c2);
+                LCD_drawPixel(x+i-2,y+j,c2);
+                LCD_drawPixel(x+i-2,y-j,c2);
             }
         }
     }     
-    
+}
+
+signed short sign(signed short val) {
+    return (val>0) - (val<0);
 }
