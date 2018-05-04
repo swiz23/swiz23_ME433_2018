@@ -69,7 +69,7 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 uint8_t APP_MAKE_BUFFER_DMA_READY dataOut[APP_READ_BUFFER_SIZE];
 uint8_t APP_MAKE_BUFFER_DMA_READY readBuffer[APP_READ_BUFFER_SIZE];
 int len, i = 0;
-int startTime,readTime = 0; // to remember the loop time
+int startTime; // to remember the loop time
 
 // *****************************************************************************
 /* Application Data
@@ -478,18 +478,16 @@ void APP_Tasks(void) {
                 static unsigned char dat[15]; // initialize array to hold bytes from IMU
                 static signed short final_data[8];
                 static int cntr;
-                if (i == 0 || _CP0_GET_COUNT() - readTime > (48000000 / 2 / 5)) {
-                    readTime = _CP0_GET_COUNT();
-                    if (getIMU() == 0x69) {
-                        LATAINV = 0x10; // invert the fourth bit
-                    }
-
-                    I2C_read_multiple(0x20,dat,14);
-                    for (cntr = 0; cntr < 14; cntr+=2) {
-                        final_data[cntr/2] = dat[cntr] | dat[cntr+1] << 8;
-                    }
+                   
+                if (getIMU() == 0x69) {
+                    LATAINV = 0x10; // invert the fourth bit
                 }
-                len = sprintf(dataOut,"%d %d %d %d %d %d %d\r\n",i,final_data[4],final_data[5],final_data[6],final_data[1],final_data[2],final_data[3]);    
+
+                I2C_read_multiple(0x20,dat,14);
+                for (cntr = 0; cntr < 14; cntr+=2) {
+                    final_data[cntr/2] = dat[cntr] | dat[cntr+1] << 8;
+                }
+                len = sprintf(dataOut,"%2d %6d %6d %6d %6d %6d %6d\r\n",i,final_data[4],final_data[5],final_data[6],final_data[1],final_data[2],final_data[3]);    
 
                 i++; // increment the index so we see a change in the text
             } else {
