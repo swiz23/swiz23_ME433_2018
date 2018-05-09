@@ -69,9 +69,10 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 
 uint8_t APP_MAKE_BUFFER_DMA_READY dataOut[APP_READ_BUFFER_SIZE];
 uint8_t APP_MAKE_BUFFER_DMA_READY readBuffer[APP_READ_BUFFER_SIZE];
-int len, i = 0;
+int len, i, b = 0;
 int startTime = 0; // to remember the loop time
-
+double mafb[9] = {0.111, 0.111, 0.111, 0.111, 0.111, 0.111, 0.111, 0.111, 0.111};
+int raw_data[100];
 // *****************************************************************************
 /* Application Data
 
@@ -371,11 +372,16 @@ void APP_Initialize(void) {
     static char message[30];
     sprintf(message,"Who Am I: ");
     draw_string(5,5, message, WHITE, BLACK);     
-    sprintf(message,"Accel X: ");
+    sprintf(message,"AX: ");
     draw_string(5,15, message, WHITE, BLACK);
-    sprintf(message,"Accel Y: ");
-    draw_string(5,25, message, WHITE, BLACK);    
+    sprintf(message,"AY: ");
+    draw_string(5,25, message, WHITE, BLACK);  
+    sprintf(message,"AZ: ");
+    draw_string(5,35, message, WHITE, BLACK);      
     draw_plain(63,96,5,60,WHITE);    
+    for (b=0; b<100; b++){
+        raw_data[b] = 0;
+    }
     __builtin_enable_interrupts();
 
     
@@ -491,14 +497,30 @@ void APP_Tasks(void) {
             static unsigned char dat[15]; // initialize array to hold bytes from IMU
             static signed short final_data[8];
             static int cntr;
-
+            static double sum;
             I2C_read_multiple(0x20,dat,14);
             for (cntr = 0; cntr < 14; cntr+=2) {
                 final_data[cntr/2] = dat[cntr] | dat[cntr+1] << 8;
             }
                 
-            if (appData.readBuffer[0] == 'r'){                
-                len = sprintf(dataOut,"%2d %6d %6d %6d %6d %6d %6d\r\n",i,final_data[4],final_data[5],final_data[6],final_data[1],final_data[2],final_data[3]);    
+            if (appData.readBuffer[0] == 'r'){    
+                len = sprintf(dataOut,"%2d %6d\r\n",i,final_data[6]);
+                raw_data[i] = final_data[6];
+                int j;
+                // MAF Filter
+                sum = 0.0;
+                if (i >= 8) {
+                    for (j=0; j<9; j++){
+                        sum = sum + raw_data[i-8+j];
+                    }
+                    
+                // FIR Filter
+                    
+                // IIR Filter
+                    
+                    
+                len = sprintf(dataOut,"%2d %6d %6.2f\r\n",i,final_data[6],sum/9.0);                    
+                }
                 i++; // increment the index so we see a change in the text
             } else {
                 len = 1;
@@ -511,14 +533,20 @@ void APP_Tasks(void) {
                 }                
                 draw_axes(63,96,5,60,MAGENTA,final_data[4],final_data[5],WHITE);
 
-                sprintf(message,"%d  ",final_data[4]);
-                draw_string(50,15, message, WHITE, BLACK);
+                sprintf(message,"%d ",final_data[4]);
+                draw_string(25,15, message, WHITE, BLACK);
 
-                sprintf(message,"%d  ",final_data[5]);
-                draw_string(50,25, message, WHITE, BLACK);                         
+                sprintf(message,"%d ",final_data[5]);
+                draw_string(25,25, message, WHITE, BLACK); 
+                
+                sprintf(message,"%d ",final_data[6]);
+                draw_string(25,35, message, WHITE, BLACK); 
             }
             if (i > 99) {
                 i = 0;
+                for (b=0; b<100; b++) {
+                    raw_data[b] = 0;
+                }
                 appData.readBuffer[0] = 'd';
             }
             /* IF A LETTER WAS RECEIVED, ECHO IT BACK SO THE USER CAN SEE IT */
