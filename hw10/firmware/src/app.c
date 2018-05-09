@@ -375,7 +375,7 @@ void APP_Initialize(void) {
     draw_string(5,15, message, WHITE, BLACK);
     sprintf(message,"Accel Y: ");
     draw_string(5,25, message, WHITE, BLACK);    
-//    draw_plain(63,96,5,60,WHITE);    
+    draw_plain(63,96,5,60,WHITE);    
     __builtin_enable_interrupts();
 
     
@@ -509,7 +509,7 @@ void APP_Tasks(void) {
                     sprintf(message,"%d",getIMU());
                     draw_string(55,5, message, WHITE, BLACK);                    
                 }                
-       //         draw_axes(63,96,5,60,MAGENTA,final_data[4],final_data[5],WHITE);
+                draw_axes(63,96,5,60,MAGENTA,final_data[4],final_data[5],WHITE);
 
                 sprintf(message,"%d  ",final_data[4]);
                 draw_string(50,15, message, WHITE, BLACK);
