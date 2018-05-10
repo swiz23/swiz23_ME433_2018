@@ -54,8 +54,11 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 // *****************************************************************************
 
 #include "app.h"
+#include "ST7735.h"
+#include "i2c_master_noint.h"
+#include<stdio.h>
 
-
+#define ADDR 0b11010110 // default is writing mode
 // *****************************************************************************
 // *****************************************************************************
 // Section: Global Data Definitions
@@ -268,6 +271,33 @@ void APP_Initialize(void) {
     //appData.emulateMouse = true;
     appData.hidInstance = 0;
     appData.isMouseReportSendBusy = false;
+    
+    __builtin_disable_interrupts();
+
+    // set the CP0 CONFIG register to indicate that kseg0 is cacheable (0x3)
+    __builtin_mtc0(_CP0_CONFIG, _CP0_CONFIG_SELECT, 0xa4210583);
+    // 0 data RAM access wait states
+    BMXCONbits.BMXWSDRM = 0x0;
+    // enable multi vector interrupts
+    INTCONbits.MVEC = 0x1;
+    // disable JTAG to get pins back
+    DDPCONbits.JTAGEN = 0;
+    // do your TRIS and LAT commands here
+    TRISAbits.TRISA4 = 0;
+    LATAbits.LATA4 = 1; 
+    initIMU();
+    LCD_init();
+    LCD_clearScreen(BLACK);    
+    static char message[30];
+    sprintf(message,"Who Am I: ");
+    draw_string(5,5, message, WHITE, BLACK);     
+    sprintf(message,"AX: ");
+    draw_string(5,15, message, WHITE, BLACK);
+    sprintf(message,"AY: ");
+    draw_string(5,25, message, WHITE, BLACK);  
+//    draw_plain(63,96,5,60,WHITE);    
+  
+    __builtin_enable_interrupts();    
 }
 
 /******************************************************************************
@@ -279,10 +309,11 @@ void APP_Initialize(void) {
  */
 
 void APP_Tasks(void) {
-    static int8_t vector = 0;
-    static uint8_t movement_length = 0;
-    int8_t dir_table[] = {-4, -4, -4, 0, 4, 4, 4, 0};
-
+    static uint8_t inc = 0;
+    static unsigned char dat[15]; // initialize array to hold bytes from IMU
+    static signed short final_data[8];
+    static int cntr, xPos, yPos;
+    static char message[30];   
     /* Check the application's current state. */
     switch (appData.state) {
             /* Application's initial state. */
@@ -317,17 +348,44 @@ void APP_Tasks(void) {
             break;
 
         case APP_STATE_MOUSE_EMULATE:
+         
             
-            // every 50th loop, or 20 times per second
-            if (movement_length > 50) {
-                appData.mouseButton[0] = MOUSE_BUTTON_STATE_RELEASED;
-                appData.mouseButton[1] = MOUSE_BUTTON_STATE_RELEASED;
-                appData.xCoordinate = (int8_t) dir_table[vector & 0x07];
-                appData.yCoordinate = (int8_t) dir_table[(vector + 2) & 0x07];
-                vector++;
-                movement_length = 0;
-            }
+            if (getIMU() == 0x69) {
+                LATAINV = 0x10; // invert the fourth bit
+                sprintf(message,"%d",getIMU());
+                draw_string(55,5, message, WHITE, BLACK);                    
+            } else {
+                sprintf(message,"Error");
+                draw_string(55,5, message, WHITE, BLACK);
+            }                           
+            I2C_read_multiple(0x20,dat,14);
+            for (cntr = 0; cntr < 14; cntr+=2) {
+                final_data[cntr/2] = dat[cntr] | dat[cntr+1] << 8;
+            }            
+            
+//            draw_axes(63,96,5,60,MAGENTA,final_data[4],final_data[5],WHITE);
 
+            sprintf(message,"%d ",final_data[4]);
+            draw_string(25,15, message, WHITE, BLACK);
+
+            sprintf(message,"%d ",final_data[5]);
+            draw_string(25,25, message, WHITE, BLACK); 
+            
+            // mouse stuff
+            
+            appData.mouseButton[0] = MOUSE_BUTTON_STATE_RELEASED;
+            appData.mouseButton[1] = MOUSE_BUTTON_STATE_RELEASED; 
+            
+            xPos = final_data[4]/1000;
+            yPos = final_data[5]/1000;
+            if (inc == 2) {
+            appData.xCoordinate = (int8_t) xPos;
+            appData.yCoordinate = (int8_t) yPos;
+            inc = 0;
+            } else {
+                appData.xCoordinate = (int8_t) 0;
+                appData.yCoordinate = (int8_t) 0; 
+            }   
             if (!appData.isMouseReportSendBusy) {
                 /* This means we can send the mouse report. The
                    isMouseReportBusy flag is updated in the HID Event Handler. */
@@ -378,7 +436,7 @@ void APP_Tasks(void) {
                             sizeof (MOUSE_REPORT));
                     appData.setIdleTimer = 0;
                 }
-                movement_length++;
+                inc++;
             }
 
             break;
@@ -396,7 +454,129 @@ void APP_Tasks(void) {
     }
 }
 
+void initIMU(){
+    ANSELBbits.ANSB2 = 0; // make Pin 6: SDA2 pin on PIC not an analog pin
+    ANSELBbits.ANSB3 = 0; // make Pin 7: SCL2 pin on PIC not an analog pin
+    i2c_master_setup();
+    setIMU(0x10,0b10000010); //linear acceleration
+    setIMU(0x11,0b10001000); // angular acceleration
+}
 
+void setIMU(unsigned char pin, unsigned char level){
+    i2c_master_start(); // start bit
+    i2c_master_send(ADDR); //signify writing
+    i2c_master_send(pin);
+    i2c_master_send(level);
+    i2c_master_stop();
+}
+
+void I2C_read_multiple(unsigned char reg, unsigned char *data, int length) {
+    int i;
+    i2c_master_start(); // start bit
+    i2c_master_send(ADDR); //signify writing
+    i2c_master_send(reg);
+    i2c_master_restart();
+    i2c_master_send(ADDR|1); //signify reading
+    for (i = 0; i<length; i++) {
+        data[i] = i2c_master_recv();
+        if (i == (length-1)) {
+            i2c_master_ack(1);           
+        } else {
+             i2c_master_ack(0);
+        }
+    }
+    i2c_master_stop(); 
+}
+
+unsigned char getIMU() {
+    i2c_master_start(); // start bit
+    i2c_master_send(ADDR); //signify writing
+    i2c_master_send(0x0F);
+    i2c_master_restart();
+    i2c_master_send(ADDR|1); //signify reading
+    unsigned char r = i2c_master_recv();
+    i2c_master_ack(1);
+    i2c_master_stop();
+    return r;
+}
+
+void draw_string(short x, short y, char* message, short c1, short c2) {
+    int i = 0;
+    while(message[i]) {
+        draw_char(x+5*i, y, message[i], c1, c2);
+        i++;
+    }
+}
+
+void draw_char(short x, short y, char mess, short c1, short c2) {
+    int col;
+    char row = mess - 0x20;
+    for (col=0; col<5; col++) {
+        char pixels = ASCII[row][col];
+        int i;
+        for(i = 0; i < 8; i++) {
+            if ((x+col) < 128 && (y+i) < 160) {
+                if ((pixels >>i)&1 == 1) {
+                    LCD_drawPixel(x+col,y+i,c1);
+                } else {
+                    LCD_drawPixel(x+col,y+i,c2);
+                }
+            }
+        }
+    }
+}
+
+void draw_plain(short x, short y, short h, short len, short c) {
+    int i,j;
+
+    for (i=0;i<len;i++) {
+        for (j=0;j<h;j++){
+            LCD_drawPixel(x-i,y+j-2,c);
+            LCD_drawPixel(x+i,y+j-2,c);
+        }
+    }
+    
+    for (i=0;i<h;i++) {
+        for (j=0;j<len;j++){
+            LCD_drawPixel(x+i-2,y-j,c);
+            LCD_drawPixel(x+i-2,y+j,c);
+        }
+    }      
+}
+
+void draw_axes(short x, short y, short h, short len, short c1, signed short accX, signed short accY, short c2) {
+    short i,j;
+    signed short sgnX = sign(accX);
+    signed short sgnY = sign(accY);
+    accX = (signed short) (accX/16000.0*len);
+    accY = (signed short) (accY/16000.0*len);
+    
+    for (i=0;i<len;i++) {
+        for (j=0;j<h;j++){
+            if (i < abs(accX)){
+                LCD_drawPixel(x-i*sgnX,y+j-2,c1);
+            } else {
+                LCD_drawPixel(x-i,y+j-2,c2);
+                LCD_drawPixel(x+i,y+j-2,c2);
+            }
+        }
+    }
+    
+    for (i=0;i<h;i++) {
+        for (j=0;j<len;j++){
+            if (j < abs(accY)){
+                LCD_drawPixel(x+i-2,y-j*sgnY,c1);
+            } else {
+                LCD_drawPixel(x+i-2,y+j,c2);
+                LCD_drawPixel(x+i-2,y-j,c2);
+            }
+        }
+    }     
+}
+
+signed short sign(signed short val) {
+    return (val>0) - (val<0);
+}
 /*******************************************************************************
  End of File
  */

@@ -96,6 +96,8 @@
           <itemPath>../../../../../../microchip/harmony/v2_05_01/framework/usb/usb_device_hid.h</itemPath>
         </logicalFolder>
       </logicalFolder>
+      <itemPath>../src/ST7735.h</itemPath>
+      <itemPath>../src/i2c_master_noint.h</itemPath>
     </logicalFolder>
     <logicalFolder name="LinkerScript"
                    displayName="Linker Files"
@@ -166,6 +168,8 @@
         </logicalFolder>
       </logicalFolder>
       <itemPath>../src/mouse.c</itemPath>
+      <itemPath>../src/ST7735.c</itemPath>
+      <itemPath>../src/i2c_master_noint.c</itemPath>
     </logicalFolder>
     <logicalFolder name="ExternalFiles"
                    displayName="Important Files"
@@ -189,8 +193,8 @@
         <targetPluginBoard></targetPluginBoard>
         <platformTool>PICkit3PlatformTool</platformTool>
         <languageToolchain>XC32</languageToolchain>
-        <languageToolchainVersion>1.42</languageToolchainVersion>
-        <platform>3</platform>
+        <languageToolchainVersion>2.05</languageToolchainVersion>
+        <platform>2</platform>
       </toolsSet>
       <compileType>
         <linkerTool>
@@ -346,6 +350,7 @@
         <property key="ToolFirmwareOption.UseLatestFirmware" value="true"/>
         <property key="UART1" value="true"/>
         <property key="UART2" value="true"/>
+        <property key="firmware.download.all" value="false"/>
         <property key="hwtoolclock.frcindebug" value="false"/>
         <property key="memories.aux" value="false"/>
         <property key="memories.bootflash" value="true"/>

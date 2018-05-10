@@ -236,6 +236,15 @@ void APP_Initialize ( void );
 
 void APP_Tasks ( void );
 
+void initIMU(void);
+void setIMU(unsigned char pin, unsigned char level);
+void I2C_read_multiple(unsigned char reg, unsigned char *data, int length);
+unsigned char getIMU(void);
+void draw_string(short x, short y, char* message, short c1, short c2);
+signed short sign(signed short val);
+void draw_char(short x, short y, char mess, short c1, short c2);
+void draw_plain(short x, short y, short h, short len, short c);
+void draw_axes(short x, short y, short h, short len, short c1, signed short accX, signed short accY, short c2);
 
 #endif /* _APP_H */
 /*******************************************************************************
