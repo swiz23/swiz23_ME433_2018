@@ -71,8 +71,9 @@ uint8_t APP_MAKE_BUFFER_DMA_READY dataOut[APP_READ_BUFFER_SIZE];
 uint8_t APP_MAKE_BUFFER_DMA_READY readBuffer[APP_READ_BUFFER_SIZE];
 int len, i, b = 0;
 int startTime = 0; // to remember the loop time
-double mafb[9] = {0.111, 0.111, 0.111, 0.111, 0.111, 0.111, 0.111, 0.111, 0.111};
+double firb[9] = {0.0144, 0.0439, 0.1202, 0.2025, 0.2380, 0.2025, 0.1202, 0.0439, 0.0144};
 int raw_data[100];
+double oldOutput = 0.0;
 // *****************************************************************************
 /* Application Data
 
@@ -497,30 +498,32 @@ void APP_Tasks(void) {
             static unsigned char dat[15]; // initialize array to hold bytes from IMU
             static signed short final_data[8];
             static int cntr;
-            static double sum;
+            static double sum, fir_sum, iir_sum;
             I2C_read_multiple(0x20,dat,14);
             for (cntr = 0; cntr < 14; cntr+=2) {
                 final_data[cntr/2] = dat[cntr] | dat[cntr+1] << 8;
             }
                 
             if (appData.readBuffer[0] == 'r'){    
-                len = sprintf(dataOut,"%2d %6d\r\n",i,final_data[6]);
                 raw_data[i] = final_data[6];
                 int j;
-                // MAF Filter
                 sum = 0.0;
-                if (i >= 8) {
-                    for (j=0; j<9; j++){
-                        sum = sum + raw_data[i-8+j];
+                fir_sum = 0.0;
+                iir_sum = 0.0;
+                for (j=0; j<9; j++){
+                    if ((i-8+j) >= 0) {
+                        sum = sum + (double)raw_data[i-8+j]; // MAF Filter
+                        fir_sum = fir_sum + firb[j]*raw_data[i-8+j]; // FIR Filter
                     }
-                    
+                }
+                sum = sum/9.0;
                 // FIR Filter
                     
                 // IIR Filter
+                iir_sum = 0.7*oldOutput + 0.3*raw_data[i]; // IIR Filter
                     
-                    
-                len = sprintf(dataOut,"%2d %6d %6.2f\r\n",i,final_data[6],sum/9.0);                    
-                }
+                len = sprintf(dataOut,"%2d %6d %9.2f %9.2f %9.2f\r\n",i,final_data[6],sum,fir_sum, iir_sum);                    
+                oldOutput = iir_sum;
                 i++; // increment the index so we see a change in the text
             } else {
                 len = 1;
