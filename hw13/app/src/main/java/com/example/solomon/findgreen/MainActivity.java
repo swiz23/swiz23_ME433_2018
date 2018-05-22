@@ -169,7 +169,7 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
                 bmp.getPixels(pixels, 0, bmp.getWidth(), 0, j, bmp.getWidth(), 1);
 
                 // in the row, see if there is more green than red
-                for (int i = 0; i < bmp.getWidth(); i++) {
+                for (int i = 0; i < bmp.getWidth(); i+=2) {
                     if ((green(pixels[i]) - red(pixels[i])) > thresh1 && (green(pixels[i]) - blue(pixels[i])) > thresh2) {
                         pixels[i] = rgb(0, 255, 0); // over write the pixel with pure green
                     }
