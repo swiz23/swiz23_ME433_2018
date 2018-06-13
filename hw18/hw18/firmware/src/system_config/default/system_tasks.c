@@ -1,36 +1,28 @@
 /*******************************************************************************
- System Interrupts File
+ System Tasks File
 
   File Name:
-    system_interrupt.c
+    system_tasks.c
 
   Summary:
-    Raw ISR definitions.
+    This file contains source code necessary to maintain system's polled state
+    machines.
 
   Description:
-    This file contains a definitions of the raw ISRs required to support the
-    interrupt sub-system.
-
-  Summary:
-    This file contains source code for the interrupt vector functions in the
-    system.
-
-  Description:
-    This file contains source code for the interrupt vector functions in the
-    system.  It implements the system and part specific vector "stub" functions
-    from which the individual "Tasks" functions are called for any modules
-    executing interrupt-driven in the MPLAB Harmony system.
+    This file contains source code necessary to maintain system's polled state
+    machines.  It implements the "SYS_Tasks" function that calls the individual
+    "Tasks" functions for all polled MPLAB Harmony modules in the system.
 
   Remarks:
     This file requires access to the systemObjects global data structure that
     contains the object handles to all MPLAB Harmony module objects executing
-    interrupt-driven in the system.  These handles are passed into the individual
-    module "Tasks" functions to identify the instance of the module to maintain.
+    polled in the system.  These handles are passed into the individual module
+    "Tasks" functions to identify the instance of the module to maintain.
  *******************************************************************************/
 
 // DOM-IGNORE-BEGIN
 /*******************************************************************************
-Copyright (c) 2011-2014 released Microchip Technology Inc.  All rights reserved.
+Copyright (c) 2013-2015 released Microchip Technology Inc.  All rights reserved.
 
 Microchip licenses to you the right to use, modify, copy and distribute
 Software only when embedded on a Microchip microcontroller or digital signal
@@ -59,64 +51,46 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 // *****************************************************************************
 // *****************************************************************************
 
-#include "system/common/sys_common.h"
-#include "app.h"
+#include "system_config.h"
 #include "system_definitions.h"
 
+
 // *****************************************************************************
 // *****************************************************************************
-// Section: System Interrupt Vector Functions
+// Section: System "Tasks" Routine
 // *****************************************************************************
 // *****************************************************************************
 
- 
-void __ISR(_USB_1_VECTOR, ipl4AUTO) _IntHandlerUSBInstance0(void)
+/*******************************************************************************
+  Function:
+    void SYS_Tasks ( void )
+
+  Remarks:
+    See prototype in system/common/sys_module.h.
+*/
+
+void SYS_Tasks ( void )
 {
-    DRV_USBFS_Tasks_ISR(sysObj.drvUSBObject);
+    /* Maintain system services */
+
+    /* Maintain Device Drivers */
+
+    /* Maintain Middleware & Other Libraries */
+
+    
+    /* USB FS Driver Task Routine */ 
+     DRV_USBFS_Tasks(sysObj.drvUSBObject);
+     
+ 
+    /* USB Device layer tasks routine */ 
+    USB_DEVICE_Tasks(sysObj.usbDevObject0);
+
+    /* Maintain the application's state machine. */
+    APP_Tasks();
 }
 
-void __ISR(_TIMER_4_VECTOR, IPL4SOFT) Timer4ISR(void) {
-  // code for PI control goes here
-  // PI for left motor
-    double e1 = 0, u1 = 0;
-    static double eint1 = 0;
-    double kp1 = 15,ki1 = 0.3;
-    int lc = TMR3;
-    e1 = (rxVal - lc);
-    eint1 = eint1 + e1;
-    if (eint1 > 37){
-        eint1 = 37;
-    }
-    u1 = kp1*e1 + ki1*eint1;
-    if (u1 > 37){
-        u1 = 37;
-    } else if (u1 < 0) {
-        u1 = 0;
-    }
-    OC4RS = (int)(u1/37.0*PR2);
-  // PI for right motor
-    double e2 = 0, u2 = 0;
-    static double eint2 = 0;
-    double kp2 = 15,ki2 = 0.3;
-    int rc = TMR5;
-    e2 = (rxVal - rc);
-    eint2 = eint2 + e2;
-    if (eint2 > 37){
-        eint2 = 37;
-    }
-    u2 = kp2*e2 + ki2*eint2;
-    if (u2 > 37){
-        u2 = 37;
-    } else if (u2 < 0) {
-        u2 = 0;
-    }
-    OC1RS = (int)(u2/37.0*PR2);
-    
-    TMR3 = 0;
-    TMR5 = 0;
-    
-  IFS0bits.T4IF = 0; // clear interrupt flag, last line
-}
+
 /*******************************************************************************
  End of File
-*/
+ */
+

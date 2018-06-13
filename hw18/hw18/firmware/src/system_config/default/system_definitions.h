@@ -1,36 +1,20 @@
 /*******************************************************************************
- System Interrupts File
+  System Definitions
 
   File Name:
-    system_interrupt.c
+    system_definitions.h
 
   Summary:
-    Raw ISR definitions.
+    MPLAB Harmony project system definitions.
 
   Description:
-    This file contains a definitions of the raw ISRs required to support the
-    interrupt sub-system.
-
-  Summary:
-    This file contains source code for the interrupt vector functions in the
-    system.
-
-  Description:
-    This file contains source code for the interrupt vector functions in the
-    system.  It implements the system and part specific vector "stub" functions
-    from which the individual "Tasks" functions are called for any modules
-    executing interrupt-driven in the MPLAB Harmony system.
-
-  Remarks:
-    This file requires access to the systemObjects global data structure that
-    contains the object handles to all MPLAB Harmony module objects executing
-    interrupt-driven in the system.  These handles are passed into the individual
-    module "Tasks" functions to identify the instance of the module to maintain.
+    This file contains the system-wide prototypes and definitions for an MPLAB
+    Harmony project.
  *******************************************************************************/
 
-// DOM-IGNORE-BEGIN
+//DOM-IGNORE-BEGIN
 /*******************************************************************************
-Copyright (c) 2011-2014 released Microchip Technology Inc.  All rights reserved.
+Copyright (c) 2013-2014 released Microchip Technology Inc.  All rights reserved.
 
 Microchip licenses to you the right to use, modify, copy and distribute
 Software only when embedded on a Microchip microcontroller or digital signal
@@ -40,7 +24,7 @@ controller that is integrated into your product or third party product
 You should refer to the license agreement accompanying this Software for
 additional information regarding your rights and obligations.
 
-SOFTWARE AND DOCUMENTATION ARE PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND,
+SOFTWARE AND DOCUMENTATION ARE PROVIDED AS IS WITHOUT WARRANTY OF ANY KIND,
 EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION, ANY WARRANTY OF
 MERCHANTABILITY, TITLE, NON-INFRINGEMENT AND FITNESS FOR A PARTICULAR PURPOSE.
 IN NO EVENT SHALL MICROCHIP OR ITS LICENSORS BE LIABLE OR OBLIGATED UNDER
@@ -51,72 +35,87 @@ CONSEQUENTIAL DAMAGES, LOST PROFITS OR LOST DATA, COST OF PROCUREMENT OF
 SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 (INCLUDING BUT NOT LIMITED TO ANY DEFENSE THEREOF), OR OTHER SIMILAR COSTS.
  *******************************************************************************/
-// DOM-IGNORE-END
+//DOM-IGNORE-END
+#ifndef _SYS_DEFINITIONS_H
+#define _SYS_DEFINITIONS_H
 
 // *****************************************************************************
 // *****************************************************************************
 // Section: Included Files
 // *****************************************************************************
 // *****************************************************************************
-
+#include <stdint.h>
+#include <stddef.h>
+#include <stdbool.h>
 #include "system/common/sys_common.h"
+#include "system/common/sys_module.h"
+#include "system/devcon/sys_devcon.h"
+#include "system/clk/sys_clk.h"
+#include "system/int/sys_int.h"
+#include "system/ports/sys_ports.h"
+#include "driver/usb/usbfs/drv_usbfs.h"
+#include "usb/usb_device.h"
+#include "usb/usb_device_cdc.h"
 #include "app.h"
-#include "system_definitions.h"
+
+
+// DOM-IGNORE-BEGIN
+#ifdef __cplusplus  // Provide C++ Compatibility
+
+extern "C" {
+
+#endif
+// DOM-IGNORE-END
 
 // *****************************************************************************
 // *****************************************************************************
-// Section: System Interrupt Vector Functions
+// Section: Type Definitions
 // *****************************************************************************
 // *****************************************************************************
 
- 
-void __ISR(_USB_1_VECTOR, ipl4AUTO) _IntHandlerUSBInstance0(void)
+// *****************************************************************************
+/* System Objects
+
+  Summary:
+    Structure holding the system's object handles
+
+  Description:
+    This structure contains the object handles for all objects in the
+    MPLAB Harmony project's system configuration.
+
+  Remarks:
+    These handles are returned from the "Initialize" functions for each module
+    and must be passed into the "Tasks" function for each module.
+*/
+
+typedef struct
 {
-    DRV_USBFS_Tasks_ISR(sysObj.drvUSBObject);
-}
 
-void __ISR(_TIMER_4_VECTOR, IPL4SOFT) Timer4ISR(void) {
-  // code for PI control goes here
-  // PI for left motor
-    double e1 = 0, u1 = 0;
-    static double eint1 = 0;
-    double kp1 = 15,ki1 = 0.3;
-    int lc = TMR3;
-    e1 = (rxVal - lc);
-    eint1 = eint1 + e1;
-    if (eint1 > 37){
-        eint1 = 37;
-    }
-    u1 = kp1*e1 + ki1*eint1;
-    if (u1 > 37){
-        u1 = 37;
-    } else if (u1 < 0) {
-        u1 = 0;
-    }
-    OC4RS = (int)(u1/37.0*PR2);
-  // PI for right motor
-    double e2 = 0, u2 = 0;
-    static double eint2 = 0;
-    double kp2 = 15,ki2 = 0.3;
-    int rc = TMR5;
-    e2 = (rxVal - rc);
-    eint2 = eint2 + e2;
-    if (eint2 > 37){
-        eint2 = 37;
-    }
-    u2 = kp2*e2 + ki2*eint2;
-    if (u2 > 37){
-        u2 = 37;
-    } else if (u2 < 0) {
-        u2 = 0;
-    }
-    OC1RS = (int)(u2/37.0*PR2);
+    SYS_MODULE_OBJ  drvUSBObject;
     
-    TMR3 = 0;
-    TMR5 = 0;
-    
-  IFS0bits.T4IF = 0; // clear interrupt flag, last line
+    SYS_MODULE_OBJ  usbDevObject0;
+
+
+
+} SYSTEM_OBJECTS;
+
+// *****************************************************************************
+// *****************************************************************************
+// Section: extern declarations
+// *****************************************************************************
+// *****************************************************************************
+
+extern SYSTEM_OBJECTS sysObj;
+
+
+//DOM-IGNORE-BEGIN
+#ifdef __cplusplus
 }
+#endif
+//DOM-IGNORE-END
+
+#endif /* _SYS_DEFINITIONS_H */
 /*******************************************************************************
  End of File
 */
+

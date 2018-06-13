@@ -1,38 +1,33 @@
 /*******************************************************************************
- System Interrupts File
+  MPLAB Harmony Project Main Source File
 
+  Company:
+    Microchip Technology Inc.
+  
   File Name:
-    system_interrupt.c
+    main.c
 
   Summary:
-    Raw ISR definitions.
+    This file contains the "main" function for an MPLAB Harmony project.
 
   Description:
-    This file contains a definitions of the raw ISRs required to support the
-    interrupt sub-system.
-
-  Summary:
-    This file contains source code for the interrupt vector functions in the
-    system.
-
-  Description:
-    This file contains source code for the interrupt vector functions in the
-    system.  It implements the system and part specific vector "stub" functions
-    from which the individual "Tasks" functions are called for any modules
-    executing interrupt-driven in the MPLAB Harmony system.
-
-  Remarks:
-    This file requires access to the systemObjects global data structure that
-    contains the object handles to all MPLAB Harmony module objects executing
-    interrupt-driven in the system.  These handles are passed into the individual
-    module "Tasks" functions to identify the instance of the module to maintain.
+    This file contains the "main" function for an MPLAB Harmony project.  The
+    "main" function calls the "SYS_Initialize" function to initialize the state 
+    machines of all MPLAB Harmony modules in the system and it calls the 
+    "SYS_Tasks" function from within a system-wide "super" loop to maintain 
+    their correct operation. These two functions are implemented in 
+    configuration-specific files (usually "system_init.c" and "system_tasks.c")
+    in a configuration-specific folder under the "src/system_config" folder 
+    within this project's top-level folder.  An MPLAB Harmony project may have
+    more than one configuration, each contained within it's own folder under
+    the "system_config" folder.
  *******************************************************************************/
 
 // DOM-IGNORE-BEGIN
 /*******************************************************************************
-Copyright (c) 2011-2014 released Microchip Technology Inc.  All rights reserved.
+Copyright (c) 2013-2014 released Microchip Technology Inc.  All rights reserved.
 
-Microchip licenses to you the right to use, modify, copy and distribute
+//Microchip licenses to you the right to use, modify, copy and distribute
 Software only when embedded on a Microchip microcontroller or digital signal
 controller that is integrated into your product or third party product
 (pursuant to the sublicense terms in the accompanying license agreement).
@@ -53,70 +48,45 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
  *******************************************************************************/
 // DOM-IGNORE-END
 
+
 // *****************************************************************************
 // *****************************************************************************
 // Section: Included Files
 // *****************************************************************************
 // *****************************************************************************
 
-#include "system/common/sys_common.h"
-#include "app.h"
-#include "system_definitions.h"
+#include <stddef.h>                     // Defines NULL
+#include <stdbool.h>                    // Defines true
+#include <stdlib.h>                     // Defines EXIT_FAILURE
+#include "system/common/sys_module.h"   // SYS function prototypes
+
 
 // *****************************************************************************
 // *****************************************************************************
-// Section: System Interrupt Vector Functions
+// Section: Main Entry Point
 // *****************************************************************************
 // *****************************************************************************
 
- 
-void __ISR(_USB_1_VECTOR, ipl4AUTO) _IntHandlerUSBInstance0(void)
+int main ( void )
 {
-    DRV_USBFS_Tasks_ISR(sysObj.drvUSBObject);
+    /* Initialize all MPLAB Harmony modules, including application(s). */
+    SYS_Initialize ( NULL );
+
+
+    while ( true )
+    {
+        /* Maintain state machines of all polled MPLAB Harmony modules. */
+        SYS_Tasks ( );
+
+    }
+
+    /* Execution should not come here during normal operation */
+
+    return ( EXIT_FAILURE );
 }
 
-void __ISR(_TIMER_4_VECTOR, IPL4SOFT) Timer4ISR(void) {
-  // code for PI control goes here
-  // PI for left motor
-    double e1 = 0, u1 = 0;
-    static double eint1 = 0;
-    double kp1 = 15,ki1 = 0.3;
-    int lc = TMR3;
-    e1 = (rxVal - lc);
-    eint1 = eint1 + e1;
-    if (eint1 > 37){
-        eint1 = 37;
-    }
-    u1 = kp1*e1 + ki1*eint1;
-    if (u1 > 37){
-        u1 = 37;
-    } else if (u1 < 0) {
-        u1 = 0;
-    }
-    OC4RS = (int)(u1/37.0*PR2);
-  // PI for right motor
-    double e2 = 0, u2 = 0;
-    static double eint2 = 0;
-    double kp2 = 15,ki2 = 0.3;
-    int rc = TMR5;
-    e2 = (rxVal - rc);
-    eint2 = eint2 + e2;
-    if (eint2 > 37){
-        eint2 = 37;
-    }
-    u2 = kp2*e2 + ki2*eint2;
-    if (u2 > 37){
-        u2 = 37;
-    } else if (u2 < 0) {
-        u2 = 0;
-    }
-    OC1RS = (int)(u2/37.0*PR2);
-    
-    TMR3 = 0;
-    TMR5 = 0;
-    
-  IFS0bits.T4IF = 0; // clear interrupt flag, last line
-}
+
 /*******************************************************************************
  End of File
 */
+
