@@ -237,7 +237,7 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
             int sumCOM = 0;
             int cntr = 0;
             int[] pixels = new int[bmp.getWidth()]; // pixels[] is the RGBA data
-            for (int j = 100; j < bmp.getHeight(); j += 100) {
+            for (int j = 10; j <= 100; j += 10) {
                 bmp.getPixels(pixels, 0, bmp.getWidth(), 0, j, bmp.getWidth(), 1);
 
                 sum_mr = 0;

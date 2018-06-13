@@ -77,20 +77,22 @@ void __ISR(_USB_1_VECTOR, ipl4AUTO) _IntHandlerUSBInstance0(void)
 
 void __ISR(_TIMER_4_VECTOR, IPL4SOFT) Timer4ISR(void) {
   // code for PI control goes here
-    double k = 0.5, kl = .3;
-    int error = rxVal - 320;
+    double k = 0.15, kl = .03;
+    int error = rxVal - 319;
  
   // PI for left motor
     double e1 = 0, u1 = 0;
     static double eint1 = 0;
-    double kp1 = 2,ki1 = 0.1;
+    static double eprev1 = 0, ed1 = 0;
+    double kp1 = 1.4,ki1 = 0, kd1 = 1;
     int lc = TMR3;
-    e1 = (100*k - lc);
+    e1 = (100*k*((319-.5*abs(error))/319.0) - lc);
     eint1 = eint1 + e1;
+    ed1 = e1 - eprev1;
     if (eint1 > 100){
         eint1 = 100;
     }
-    u1 = kp1*e1 + ki1*eint1;
+    u1 = kp1*e1 + ki1*eint1+kd1*ed1;
     if (u1 > 100){
         u1 = 100;
     }
@@ -101,17 +103,20 @@ void __ISR(_TIMER_4_VECTOR, IPL4SOFT) Timer4ISR(void) {
         u1 = 0;
     }
     OC4RS = (int)(u1/100.0*PR2);
+    eprev1 = e1;
   // PI for right motor
     double e2 = 0, u2 = 0;
     static double eint2 = 0;
-    double kp2 = 2,ki2 = 0.1;
+    static double eprev2 = 0, ed2 = 0;
+    double kp2 = 1.4,ki2 = 0, kd2 = 1;
     int rc = TMR5;
-    e2 = (100*k - rc);
+    e2 = (100*k*((319-.5*abs(error))/319.0) - rc);
     eint2 = eint2 + e2;
+    ed2 = e2 - eprev2;
     if (eint2 > 100){
         eint2 = 100;
     }
-    u2 = kp2*e2 + ki2*eint2;
+    u2 = kp2*e2 + ki2*eint2 + kd2*ed2;
     if (u2 > 100){
         u2 = 100;
     }  
@@ -124,7 +129,7 @@ void __ISR(_TIMER_4_VECTOR, IPL4SOFT) Timer4ISR(void) {
     }
     
     OC1RS = (int)(u2/100.0*PR2);
-    
+    eprev2 = e2;
     TMR3 = 0;
     TMR5 = 0;
     
